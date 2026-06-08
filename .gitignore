@@ -1,1 +1,4 @@
 CLAUDE.md
+
+# Local assistant config (agent swarm definitions) — kept on disk, untracked
+.claude/
