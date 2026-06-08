@@ -10,7 +10,7 @@ Routeplane is a neutral, multi-provider **AI Gateway + Agentic Security platform
 
 ## Multi-repo layout (this is a workspace, not one repo)
 
-The top-level directory is a meta-repo containing **several independently-versioned git repos** (each subdir has its own `.git`), mapping to GitHub org `RST-Holdings`. When committing, operate inside the relevant subdir — changes do not span repos.
+The top-level directory is a meta-repo containing **several independently-versioned git repos** (each subdir has its own `.git`), mapping to GitHub org `RST-Holdings`. When committing, operate inside the relevant subdir — changes do not span repos. Caveat: the root meta-repo's own `origin` points at a personal `rohit-tambakhe/docs` repo (pushing with org credentials 403s); the real documentation repo is the `docs/` subdir (`RST-Holdings/docs`). The `docs/` remote currently embeds a PAT in `.git/config` — treat as sensitive.
 
 - `routeplane/` — the Rust Data Plane application (the actual gateway). Most code work happens here.
 - `docs/` — single source of truth for strategy/architecture/decisions. Structure: `docs/README.md` (index), `docs/product/` (feature-matrix), `docs/architecture/` (functional-spec, engineering-design), `docs/adr/`. One canonical doc per topic — no duplicates. Document every major architectural shift as a new ADR.
@@ -24,8 +24,8 @@ The top-level directory is a meta-repo containing **several independently-versio
 ```bash
 cargo build --release          # production build (matches Dockerfile, Rust 1.86)
 cargo run                      # run locally on PORT (default 8080); needs .env with provider keys
-cargo test                     # run all tests
-cargo test <name>              # run a single test by substring
+cargo test                     # NOTE: no test suite exists yet — this currently runs 0 tests
+cargo test <name>              # (once tests exist) run a single test by name substring
 cargo clippy --all-targets     # lint
 RUST_LOG=routeplane=debug cargo run   # override log filter
 docker build -t routeplane:latest ./routeplane
@@ -64,6 +64,10 @@ A request to `POST /v1/chat/completions` passes through, in order:
 - `GET /healthz` → liveness probe.
 - `GET /analytics` → dumps recent usage events. Observability (`observability.rs`) is a deliberately frugal **in-memory `VecDeque` of the last 1000 events** — no database during Alpha. This is intentional; do not add a DB dependency without an ADR (Cosmos DB migration is a planned later phase).
 
+## Git conventions
+
+- **Never add AI co-authorship to commits.** Do NOT append `Co-Authored-By: Claude …` (or any AI/assistant) trailer to commit messages or PR descriptions — this is a hard rule for this project. Plain commit messages only.
+
 ## Conventions specific to this project
 
 - **Branding is load-bearing**: public headers are `x-routeplane-api-key` and `x-routeplane-provider`; gateway keys use the `rp_` prefix. Keep "Routeplane" branding in user-facing strings.
@@ -73,5 +77,5 @@ A request to `POST /v1/chat/completions` passes through, in order:
 
 ## CI
 
-- `routeplane/.github/workflows/ci.yml`: on push/PR to `main`, logs into Azure (OIDC) + ACR, then builds & pushes the image via the shared `RST-Holdings/common-actions/rust-build@main` action, tagged with the commit SHA. (No separate test step yet — run `cargo test` locally.)
+- `routeplane/.github/workflows/ci.yml`: on push/PR to `main`, logs into Azure (OIDC) + ACR, then builds & pushes the image via the shared `RST-Holdings/common-actions/rust-build@main` action, tagged with the commit SHA. (No test step — and no tests exist yet; the intended strategy — `wiremock` mock LLM, `sqlx::test`, unit tests — is specced in `docs/architecture/engineering-design.md` §24.)
 - `infrastructure-live/.github/workflows/deploy.yml`: Terraform init/plan on PR, auto-apply on push to `main`.
