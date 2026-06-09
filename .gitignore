@@ -2,3 +2,19 @@ CLAUDE.md
 
 # Local assistant config (agent swarm definitions) — kept on disk, untracked
 .claude/
+
+# Local editor / LSP config — kept on disk, untracked (root origin is the personal
+# docs repo; per-IDE LSP wiring is developer-local). See LSP setup notes.
+.vscode/
+.helix/
+.editor/
+.serena/
+
+# Nested independently-versioned repos — each has its own .git and its own
+# RST-Holdings remote; the meta-repo must NOT track or stage them.
+/common-actions/
+/docs/
+/infrastructure-live/
+/routeplane/
+/routeplane-skills/
+/terraform-modules/
