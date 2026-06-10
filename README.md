@@ -97,44 +97,73 @@ gh pr merge --auto --squash           # arm auto-merge; it fires when all gates 
 
 ### The maintenance train: dependabot → release-please (order matters)
 
-Two bots open PRs continuously. The sequence below is the whole trick — get it wrong and you either
-cut releases that miss fixes, or churn CI re-running the same checks.
+Two robots open pull requests in these repos. You will see their names as PR authors:
 
-**1. Drain dependabot PRs first, one at a time.**
+- **Dependabot** proposes updates to things we depend on (Rust crates, GitHub Actions, Docker
+  images). Each PR bumps one dependency (or one small group) to a newer version.
+- **release-please** keeps **one** PR open per repo, titled like `chore(main): release 0.1.8`.
+  That PR is "the next release": it collects everything merged since the last release into a
+  changelog. **Merging it publishes a release and deploys it.** Leaving it open costs nothing.
 
-- Merge order within a repo is serial by construction: strict up-to-date means each merge flips the
-  remaining PRs to `BEHIND`. For each green PR: `gh pr update-branch <n>` (or comment
-  `@dependabot rebase`), wait for checks, `gh pr merge <n> --auto --squash`. Arming `--auto` on
-  several at once is fine — they'll land one per CI cycle.
-- **A red dependabot PR is the gates working, not noise.** Diagnose before touching it:
-  - `quality`/`coverage` red → the bump likely needs newer rustc than `rust-toolchain.toml` pins
-    (e.g. wiremock 0.6.5 needs > 1.86). Don't fix the code — the bump waits for a deliberate
-    toolchain upgrade. Close it and add a `dependabot.yml` ignore with a reason comment.
-  - `deps-audit` red → cargo-deny policy hit. Read the actual error: a benign ecosystem-transition
-    artifact (new transitive crate, relicensed data crate) gets a **narrow, per-crate, commented**
-    `deny.toml` exception pushed onto the dependabot branch itself; a real license/advisory problem
-    means close the PR with the evidence + `@dependabot ignore this minor version`.
-- **Never merge a base-image bump of `rust` in the Dockerfile** — the image moves in lockstep with
-  `rust-toolchain.toml` only (both are dependabot-ignored by config; a toolchain upgrade is its own
-  deliberate PR touching toolchain + Dockerfile + devcontainer together).
-- Cross-repo: if `common-actions` changed, merge it (and its release PR, to cut the tag) **before**
-  consumer repos bump their SHA pins to it.
+**The rule: handle Dependabot PRs first. Merge the release PR last, and only when you actually
+want to ship.** If you merge the release PR first, the dependency updates you merge afterwards
+are left out of that release.
 
-**2. Then merge the release-please PR — last, and only when you mean to ship.**
+#### Handling a Dependabot PR
 
-- release-please refreshes its PR after **every** push to `main`; each dependabot/feature merge
-  updates the pending version + changelog. Merging dependabot PRs *after* the release PR means they
-  miss the release. So: drain the queue, **wait for the release PR to refresh** (its head SHA
-  changes; ~1 min after the last merge), skim the generated changelog, then
-  `gh pr merge <n> --auto --squash`.
-- Merging it is a **deploy decision, not housekeeping**: tag is cut → publish DAG builds, scans,
-  SBOMs, signs, dispatches → CD cosign-verifies and deploys the digest to every cell with
-  `enabled: true` in `cells.json` (today: `dev`). Leaving the release PR open is free — it just
-  keeps accumulating; there is no need to release after every merge.
-- `chore:`/`ci:`/`docs:` merges don't trigger a release PR at all; `fix:` bumps patch, `feat:`
-  bumps minor — which is why the `pr-title` gate is required: the PR title *is* the version signal.
-- Provisioning a new cell = `terraform apply` its root under
-  `infrastructure-live/routeplane/cells/`, then flip its `enabled` in `cells.json`.
+1. **All checks green?** Merge it:
+
+   ```
+   gh pr merge <number> --auto --squash
+   ```
+
+   `--auto` means "merge by itself once everything passes" — you don't have to watch it.
+
+2. **GitHub says the branch is out of date / "BEHIND"?** That's normal. Our repos require every PR
+   to be re-tested against the newest `main` before merging, and each merge makes the *other* open
+   PRs out of date. Fix it with one command, then go back to step 1:
+
+   ```
+   gh pr update-branch <number>
+   ```
+
+   This means PRs merge **one at a time** — that's by design, not something to work around.
+
+3. **A check is red?** Do **not** merge, and do not assume the robot is right — a red check means
+   our safety net caught a problem with the new version. The two common cases:
+   - **Build or tests fail** (`quality` / `coverage`): the new version usually needs a newer Rust
+     compiler than the one we deliberately pin in `rust-toolchain.toml`. We don't change our code
+     to chase a dependency. Close the PR with a comment saying why.
+   - **`deps-audit` fails**: the new version pulled in something that violates our license or
+     security policy. This needs a maintainer's judgment call — flag it to the CTO rather than
+     deciding yourself.
+   In both cases the update isn't lost — Dependabot will offer it again later, and a maintainer
+   can tell it to stop offering it (an "ignore" rule in `.github/dependabot.yml`).
+
+4. **One hard rule:** never merge an update to the `rust` Docker base image. Our Rust version is
+   changed on purpose, in one PR that updates the toolchain file, Dockerfile, and devcontainer
+   together — never piecemeal by a robot. (Dependabot is configured not to offer these, but if
+   you ever see one, close it.)
+
+#### Cutting a release (merging the release-please PR)
+
+1. Finish merging everything you want in the release (features, fixes, Dependabot PRs).
+2. **Wait a minute.** After every merge to `main`, release-please rewrites its PR to include what
+   you just merged. Check the PR was just updated before you act on it.
+3. Read the changelog in the PR body — that's literally what you're about to release.
+4. Merge it the same way: `gh pr merge <number> --auto --squash`.
+5. What happens next, automatically: a version tag is created → the image is built, scanned for
+   vulnerabilities and secrets, and cryptographically signed → the deploy pipeline verifies that
+   signature and rolls the new version out to every environment that's switched on in
+   `infrastructure-live/routeplane/cells/cells.json` (today that's just `dev`).
+
+Good to know: the version number comes from PR titles. `fix:` PRs bump 0.1.7 → 0.1.8, `feat:` PRs
+bump 0.1.7 → 0.2.0, and `chore:`/`ci:`/`docs:` PRs don't trigger a release at all. That's why the
+`pr-title` check is strict about titles.
+
+One ordering rule for maintainers: if you changed `common-actions` (the shared CI building blocks),
+merge that repo's PRs and its release first — other repos reference it by exact commit, so it has
+to exist before they can point at it.
 
 ### Change the platform itself
 
