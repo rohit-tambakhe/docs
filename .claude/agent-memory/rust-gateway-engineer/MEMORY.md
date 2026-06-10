@@ -1,0 +1,1 @@
+- [OpenSSL build env](project_openssl_build_env.md) — local cargo build needs OPENSSL_* env vars (pkg-config missing); native-tls is intended, don't swap to rustls

@@ -1,0 +1,4 @@
+- [Competitive landmark: PAN acquired Portkey](project-pan-acquired-portkey.md) — defining 2026 event; reframes the whole moat thesis
+- [DPDP enforcement timing](project-dpdp-enforcement-timing.md) — DPDP soft until 2027-05; RBI is the live India trigger today
+- [Market assessment positioning](project-market-assessment-positioning.md) — defensible corner = sovereign agentic governance, not agentic security broadly
+- [DevEx wave-3 in flight](project-devex-wave3-in-flight.md) — docs PR #17 trued canon + 2 ADR-012 amendments (2026-06-10); ruleset apply/auto-merge/PR #38 still pending

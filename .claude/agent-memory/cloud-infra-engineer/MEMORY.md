@@ -1,0 +1,3 @@
+- [Deploy identity & FICs](deploy-identity-and-fics.md) — AZURE_CLIENT_ID = App Reg github-actions-routeplane; Contributor RBAC but NO Graph rights; flexible-FIC pattern; owner is Global Admin
+- [Infra state & roots](infra-state-and-roots.md) — infrastructure-live TF roots & separate state keys; dev auto-applied, identity/ is admin-bootstrap only; cells.json drives CD fan-out
+- [ACR id output pin](acr-module-id-output-pin.md) — acr `id` output (+cell module) first appears at SHA 49c8504; older pins break module.acr.id at plan; verify outputs at the pin not HEAD

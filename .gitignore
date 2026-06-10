@@ -1,7 +1,6 @@
-# Assistant config is SHARED with the team (CLAUDE.md, .claude/agents/,
-# .claude/settings.json) — only per-developer local state stays untracked.
-.claude/agent-memory/
-.claude/settings.local.json
+# Assistant config (.claude/, CLAUDE.md) is SHARED with the team in full —
+# agents, settings, and agent-memory — so the swarm and its accumulated
+# knowledge are reusable by every contributor.
 
 # Local editor / LSP config — kept on disk, untracked (root origin is the personal
 # docs repo; per-IDE LSP wiring is developer-local). See LSP setup notes.

@@ -1,0 +1,3 @@
+- [OneDrive drift](feedback_onedrive_drift.md) — local working-tree files go silently stale; trust git origin, not local disk; verify edits on remote
+- [Git protocol (multi-repo)](feedback_git_protocol_multirepo.md) — per-subdir repos off origin/main; conventional commits; never add AI-authorship trailer; SHA-pin bumps
+- [CD cosign gate](project_cd_pipeline.md) — CD verify = cosign keyless Binary-Auth; SBOM verify-attestation payload-print hang fixed via --output-file (cosign#3602)
