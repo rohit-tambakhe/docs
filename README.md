@@ -18,6 +18,11 @@ the repo you changed.
 The root meta-repo itself only tracks this README, `CLAUDE.md`, and `.claude/` (the shared
 assistant config) — the nested repos are gitignored here and live on their own remotes.
 
+> **Canonical copy:** the team-facing version of everything below lives at
+> [`RST-Holdings/docs → development/devex-platform.md`](https://github.com/RST-Holdings/docs/blob/main/development/devex-platform.md)
+> and is kept current via the normal PR + lint gates. **When the platform changes, update that copy
+> first** — this README is a convenience mirror for whoever lands on the meta-workspace.
+
 ## How the DevEx platform is built
 
 Three layers, all of them code-reviewed and machine-enforced. Decisions live in ADRs; this is the map.
