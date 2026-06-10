@@ -95,12 +95,46 @@ gh pr merge --auto --squash           # arm auto-merge; it fires when all gates 
   auto-merge fires. This is the known Team-plan serialization tax (no native merge queue).
 - Nobody can merge a red PR, and nobody can bypass — don't ask for an override; fix the check.
 
-### Release & deploy
+### The maintenance train: dependabot → release-please (order matters)
 
-Merge the `release-please` PR when you want a release: tag is cut → publish DAG builds, scans,
-signs, and dispatches → CD cosign-verifies and deploys the digest to enabled cells (today: `dev`).
-Provisioning a new cell = `terraform apply` its root under `infrastructure-live/routeplane/cells/`,
-then flip its `enabled` in `cells.json`.
+Two bots open PRs continuously. The sequence below is the whole trick — get it wrong and you either
+cut releases that miss fixes, or churn CI re-running the same checks.
+
+**1. Drain dependabot PRs first, one at a time.**
+
+- Merge order within a repo is serial by construction: strict up-to-date means each merge flips the
+  remaining PRs to `BEHIND`. For each green PR: `gh pr update-branch <n>` (or comment
+  `@dependabot rebase`), wait for checks, `gh pr merge <n> --auto --squash`. Arming `--auto` on
+  several at once is fine — they'll land one per CI cycle.
+- **A red dependabot PR is the gates working, not noise.** Diagnose before touching it:
+  - `quality`/`coverage` red → the bump likely needs newer rustc than `rust-toolchain.toml` pins
+    (e.g. wiremock 0.6.5 needs > 1.86). Don't fix the code — the bump waits for a deliberate
+    toolchain upgrade. Close it and add a `dependabot.yml` ignore with a reason comment.
+  - `deps-audit` red → cargo-deny policy hit. Read the actual error: a benign ecosystem-transition
+    artifact (new transitive crate, relicensed data crate) gets a **narrow, per-crate, commented**
+    `deny.toml` exception pushed onto the dependabot branch itself; a real license/advisory problem
+    means close the PR with the evidence + `@dependabot ignore this minor version`.
+- **Never merge a base-image bump of `rust` in the Dockerfile** — the image moves in lockstep with
+  `rust-toolchain.toml` only (both are dependabot-ignored by config; a toolchain upgrade is its own
+  deliberate PR touching toolchain + Dockerfile + devcontainer together).
+- Cross-repo: if `common-actions` changed, merge it (and its release PR, to cut the tag) **before**
+  consumer repos bump their SHA pins to it.
+
+**2. Then merge the release-please PR — last, and only when you mean to ship.**
+
+- release-please refreshes its PR after **every** push to `main`; each dependabot/feature merge
+  updates the pending version + changelog. Merging dependabot PRs *after* the release PR means they
+  miss the release. So: drain the queue, **wait for the release PR to refresh** (its head SHA
+  changes; ~1 min after the last merge), skim the generated changelog, then
+  `gh pr merge <n> --auto --squash`.
+- Merging it is a **deploy decision, not housekeeping**: tag is cut → publish DAG builds, scans,
+  SBOMs, signs, dispatches → CD cosign-verifies and deploys the digest to every cell with
+  `enabled: true` in `cells.json` (today: `dev`). Leaving the release PR open is free — it just
+  keeps accumulating; there is no need to release after every merge.
+- `chore:`/`ci:`/`docs:` merges don't trigger a release PR at all; `fix:` bumps patch, `feat:`
+  bumps minor — which is why the `pr-title` gate is required: the PR title *is* the version signal.
+- Provisioning a new cell = `terraform apply` its root under
+  `infrastructure-live/routeplane/cells/`, then flip its `enabled` in `cells.json`.
 
 ### Change the platform itself
 
