@@ -1,10 +1,11 @@
-CLAUDE.md
-
-# Local assistant config (agent swarm definitions) — kept on disk, untracked
-.claude/
+# Assistant config is SHARED with the team (CLAUDE.md, .claude/agents/,
+# .claude/settings.json) — only per-developer local state stays untracked.
+.claude/agent-memory/
+.claude/settings.local.json
 
 # Local editor / LSP config — kept on disk, untracked (root origin is the personal
 # docs repo; per-IDE LSP wiring is developer-local). See LSP setup notes.
+.obsidian/
 .vscode/
 .helix/
 .editor/
