@@ -8,14 +8,14 @@ Routeplane is a neutral, multi-provider **AI Gateway + Agentic Security platform
 
 What the Data Plane does today (all implemented in `routeplane/`): OpenAI-compatible `/v1/chat/completions` over **four providers** (OpenAI, Anthropic, Gemini, Azure OpenAI), **streaming (SSE)** as well as buffered, **sovereign/data-residency routing** (PII classification → region-locked provider eligibility), pluggable **routing strategies** (priority/weighted/cost/latency), a lock-free **circuit breaker + latency EWMA** per provider, PII-masking guardrails, virtual-key auth, and in-memory observability.
 
-**Read `docs/` before doing product/architecture work** — `docs/README.md` is the index. Canonical artifacts: `docs/product/feature-matrix.md` (positioning + competitive matrix), `docs/architecture/engineering-design.md` (deepest technical design — Rust/ACA), `docs/architecture/functional-spec.md` (data models, API, security), `docs/architecture/branching-and-devex.md` (trunk-based dev + entitlement delivery), `docs/architecture/deployment-topology.md` (cell-based tenancy + CD fan-out), `docs/adr/` (decisions, currently 001–014).
+**Read `docs/` before doing product/architecture work** — `docs/README.md` is the index. Canonical artifacts: `docs/product/feature-matrix.md` (positioning + competitive matrix), `docs/architecture/engineering-design.md` (deepest technical design — Rust/ACA), `docs/architecture/functional-spec.md` (data models, API, security), `docs/architecture/branching-and-devex.md` (trunk-based dev + entitlement delivery), `docs/architecture/deployment-topology.md` (cell-based tenancy + CD fan-out), `docs/adr/` (decisions, currently 001–020), `docs/product/prd/` (PRDs, currently 000–005: thin Control Plane master + sub-PRDs 001–004, agentic-security moat 005).
 
 ## Multi-repo layout (this is a workspace, not one repo)
 
 The top-level directory is a meta-repo containing **several independently-versioned git repos** (each subdir has its own `.git`), mapping to GitHub org `RST-Holdings`. When committing, operate inside the relevant subdir — changes do not span repos. Caveat: the root meta-repo's own `origin` points at a personal `rohit-tambakhe/docs` repo (pushing with org credentials 403s); the real documentation repo is the `docs/` subdir (`RST-Holdings/docs`). The `docs/` remote currently embeds a PAT in `.git/config` — treat as sensitive.
 
 - `routeplane/` — the Rust Data Plane application (the actual gateway), itself a **Cargo workspace** of several crates (see below). Most code work happens here.
-- `docs/` — single source of truth for strategy/architecture/decisions. Structure: `docs/README.md` (index), `docs/product/` (feature-matrix), `docs/architecture/` (functional-spec, engineering-design, devsecops-pipeline, platform-engineering), `docs/adr/`. One canonical doc per topic — no duplicates. Document every major architectural shift as a new ADR.
+- `docs/` — single source of truth for strategy/architecture/decisions. Structure: `docs/README.md` (index), `docs/product/` (feature-matrix, `prd/` 000–005, `portkey-parity/` program docs), `docs/architecture/` (functional-spec, engineering-design, devsecops-pipeline, platform-engineering), `docs/adr/`. One canonical doc per topic — no duplicates. Document every major architectural shift as a new ADR.
 - `terraform-modules/` — reusable Azure Terraform modules (`acr`, `aca`, `aca_env`, `log_analytics`), consumed remotely via `git::https://github.com/RST-Holdings/terraform-modules.git//modules/<x>?ref=main`.
 - `infrastructure-live/` — environment-specific Terraform that wires the modules together (`infrastructure-live/routeplane/dev/`).
 - `common-actions/` — shared composite GitHub Actions (`rust-build/` builds + pushes the Docker image to ACR).
@@ -38,7 +38,7 @@ The top-level directory is a meta-repo containing **several independently-versio
 ```bash
 cargo build --release          # production build (matches Dockerfile, Rust 1.86)
 cargo run -p routeplane        # run the gateway locally on PORT (default 8080); needs .env with provider keys
-cargo test                     # run the whole workspace test suite (~42 unit tests today)
+cargo test                     # run the whole workspace test suite (unit + wiremock adapter integration tests)
 cargo test -p router           # test a single crate
 cargo test <name>              # run a single test by name substring
 cargo clippy --all-targets     # lint
@@ -46,7 +46,7 @@ RUST_LOG=routeplane=debug cargo run -p routeplane   # override log filter
 docker build -t routeplane:latest ./routeplane      # build from the repo root
 ```
 
-Tests exist now (they did not in earlier revisions): inline `#[cfg(test)]` modules cover the circuit breaker, latency EWMA, routing-strategy ordering (with an injectable clock/RNG so there's no time/`rand` flake), residency classification, and chunk serialization. `wiremock`-backed adapter tests are the intended next layer (specced in `docs/architecture/engineering-design.md` §24).
+Tests exist now (they did not in earlier revisions): inline `#[cfg(test)]` modules cover the circuit breaker, latency EWMA, routing-strategy ordering (with an injectable clock/RNG so there's no time/`rand` flake), residency classification, and chunk serialization. A `wiremock`-backed adapter integration layer (per `docs/architecture/engineering-design.md` §24) exercises all four provider adapters — request/response translation and SSE streaming — with no real network calls.
 
 Local run requires a `.env` with `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` (loaded via `dotenvy`), because `configs/keys.json` references them as `env:OPENAI_API_KEY` etc. Azure OpenAI is configured from env directly: `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION` (default `2024-10-21`), `AZURE_OPENAI_REGION` (default `IN`), and `AZURE_OPENAI_API_KEY` (referenced from `keys.json`).
 
@@ -101,6 +101,6 @@ A request to `POST /v1/chat/completions` passes through, in order:
 
 ## CI
 
-- `routeplane/.github/workflows/ci.yml`: on push/PR to `main`, logs into Azure (OIDC) + ACR, then builds & pushes the image via the shared `RST-Holdings/common-actions/rust-build@main` action, tagged with the commit SHA. (A workspace test suite now exists — `cargo test` — even though the CI image-build step does not yet gate on it; `wiremock`-backed adapter tests are the specced next layer in `docs/architecture/engineering-design.md` §24.)
+- `routeplane/.github/workflows/ci.yml`: on push/PR to `main`, logs into Azure (OIDC) + ACR, then builds & pushes the image via the shared `RST-Holdings/common-actions/rust-build@main` action, tagged with the commit SHA. (A workspace test suite — unit tests plus the `wiremock` adapter integration layer per `docs/architecture/engineering-design.md` §24 — exists, though the CI image-build step does not yet gate on it.)
 - `infrastructure-live/.github/workflows/deploy.yml`: Terraform init/plan on PR, auto-apply on push to `main`.
 - All non-trivial CI logic lives in **composite actions** in `common-actions/`; workflows stay script-free (no inline `run:` for real logic).
