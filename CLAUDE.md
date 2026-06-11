@@ -101,6 +101,6 @@ A request to `POST /v1/chat/completions` passes through, in order:
 
 ## CI
 
-- `routeplane/.github/workflows/ci.yml`: on push/PR to `main`, logs into Azure (OIDC) + ACR, then builds & pushes the image via the shared `RST-Holdings/common-actions/rust-build@main` action, tagged with the commit SHA. (A workspace test suite — unit tests plus the `wiremock` adapter integration layer per `docs/architecture/engineering-design.md` §24 — exists, though the CI image-build step does not yet gate on it.)
+- `routeplane/.github/workflows/ci.yml`: on push/PR to `main`, logs into Azure (OIDC) + ACR, then builds & pushes the image via the shared `RST-Holdings/common-actions/rust-build@main` action, tagged with the commit SHA. (The workspace test suite — unit tests plus the `wiremock` adapter integration layer per `docs/architecture/engineering-design.md` §24 — gates the pipeline twice: `quality` (fmt+clippy+test) is a required merge check on the zero-bypass ruleset, and the main-push `build` job has `needs: quality`, so a test failure skips the entire image build/sign/dispatch DAG. Verified 2026-06-11.)
 - `infrastructure-live/.github/workflows/deploy.yml`: Terraform init/plan on PR, auto-apply on push to `main`.
 - All non-trivial CI logic lives in **composite actions** in `common-actions/`; workflows stay script-free (no inline `run:` for real logic).
