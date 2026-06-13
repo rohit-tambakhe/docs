@@ -1,0 +1,48 @@
+{
+  // Routeplane workspace LSP wiring — applies to VS Code (Remote-WSL or native),
+  // Antigravity, and any Code-OSS-based IDE that reads workspace .vscode/.
+  // Binaries are the Linux LSPs installed under ~/.cargo/bin, ~/bin, ~/.npm-global/bin.
+  // Paths are honored when the editor runs INSIDE WSL (Remote-WSL / Antigravity-in-WSL).
+
+  // ---- Rust (the data plane) -------------------------------------------------
+  // The Cargo workspace lives in routeplane/, not at the meta-repo root, so point
+  // rust-analyzer at its manifest explicitly (otherwise it finds no Cargo.toml here).
+  "rust-analyzer.linkedProjects": ["routeplane/Cargo.toml"],
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.check.allTargets": true,
+  "rust-analyzer.cargo.buildScripts.enable": true,
+  "rust-analyzer.procMacro.enable": true,
+
+  // ---- Terraform / HCL -------------------------------------------------------
+  // Force the hashicorp.terraform extension to use the terraform-ls we installed
+  // instead of downloading its own.
+  "terraform.languageServer.path": "/home/rstambakhe/bin/terraform-ls",
+  "terraform.languageServer.enable": true,
+
+  // ---- YAML (GitHub Actions workflows + general) -----------------------------
+  "yaml.schemaStore.enable": true,
+  "yaml.validate": true,
+  "yaml.format.enable": true,
+  "yaml.schemas": {
+    "https://json.schemastore.org/github-workflow.json": [
+      "**/.github/workflows/*.yml",
+      "**/.github/workflows/*.yaml"
+    ],
+    "https://json.schemastore.org/github-action.json": [
+      "**/action.yml",
+      "**/action.yaml"
+    ]
+  },
+
+  // ---- TOML (Cargo manifests) ------------------------------------------------
+  "evenBetterToml.taplo.bin": "/home/rstambakhe/.npm-global/bin/taplo",
+  "evenBetterToml.formatter.alignEntries": false,
+
+  // ---- File associations -----------------------------------------------------
+  "files.associations": {
+    "*.tf": "terraform",
+    "*.tfvars": "terraform",
+    "Cargo.lock": "toml",
+    "keys.json": "jsonc"
+  }
+}

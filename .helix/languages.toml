@@ -1,0 +1,38 @@
+# Routeplane — Helix LSP wiring. Helix auto-discovers this when launched from the
+# workspace root. Binaries resolve from PATH (~/.cargo/bin, ~/bin, ~/.npm-global/bin).
+
+[language-server.rust-analyzer]
+command = "rust-analyzer"
+config = { check = { command = "clippy" } }
+
+[language-server.terraform-ls]
+command = "terraform-ls"
+args = ["serve"]
+
+[language-server.yaml-language-server]
+command = "yaml-language-server"
+args = ["--stdio"]
+
+[language-server.taplo]
+command = "taplo"
+args = ["lsp", "stdio"]
+
+[[language]]
+name = "rust"
+language-servers = ["rust-analyzer"]
+
+[[language]]
+name = "hcl"
+language-servers = ["terraform-ls"]
+
+[[language]]
+name = "tfvars"
+language-servers = ["terraform-ls"]
+
+[[language]]
+name = "yaml"
+language-servers = ["yaml-language-server"]
+
+[[language]]
+name = "toml"
+language-servers = ["taplo"]

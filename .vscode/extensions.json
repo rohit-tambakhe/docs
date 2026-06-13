@@ -1,0 +1,11 @@
+{
+  // Recommended extensions for the Routeplane stack. VS Code / Antigravity will
+  // prompt to install these when the workspace is opened. Each pairs with one of
+  // the LSPs wired in settings.json.
+  "recommendations": [
+    "rust-lang.rust-analyzer",   // Rust data plane
+    "hashicorp.terraform",       // Terraform / HCL (terraform-ls)
+    "redhat.vscode-yaml",        // YAML + GitHub Actions schemas (yaml-language-server)
+    "tamasfe.even-better-toml"   // Cargo.toml / TOML (taplo)
+  ]
+}

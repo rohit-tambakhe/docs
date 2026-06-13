@@ -2,12 +2,10 @@
 # agents, settings, and agent-memory — so the swarm and its accumulated
 # knowledge are reusable by every contributor.
 
-# Local editor / LSP config — kept on disk, untracked (root origin is the personal
-# docs repo; per-IDE LSP wiring is developer-local). See LSP setup notes.
+# Editor / LSP config (.vscode, .helix, .editor) is tracked and shared so every
+# contributor gets the same four-LSP wiring. Obsidian vault state and the Serena
+# symbol cache stay developer-local.
 .obsidian/
-.vscode/
-.helix/
-.editor/
 .serena/
 
 # Nested independently-versioned repos — each has its own .git and its own
