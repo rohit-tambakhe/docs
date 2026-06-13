@@ -1,8 +1,9 @@
 {
   // Routeplane workspace LSP wiring — applies to VS Code (Remote-WSL or native),
   // Antigravity, and any Code-OSS-based IDE that reads workspace .vscode/.
-  // Binaries are the Linux LSPs installed under ~/.cargo/bin, ~/bin, ~/.npm-global/bin.
-  // Paths are honored when the editor runs INSIDE WSL (Remote-WSL / Antigravity-in-WSL).
+  // Portable across machines/usernames: rust-analyzer resolves from PATH, and the
+  // Terraform / TOML extensions manage their own bundled language servers (no
+  // machine-specific binary paths). Honored when the editor runs INSIDE WSL.
 
   // ---- Rust (the data plane) -------------------------------------------------
   // The Cargo workspace lives in routeplane/, not at the meta-repo root, so point
@@ -14,9 +15,9 @@
   "rust-analyzer.procMacro.enable": true,
 
   // ---- Terraform / HCL -------------------------------------------------------
-  // Force the hashicorp.terraform extension to use the terraform-ls we installed
-  // instead of downloading its own.
-  "terraform.languageServer.path": "/home/rstambakhe/bin/terraform-ls",
+  // Let the hashicorp.terraform extension manage its own terraform-ls — portable,
+  // no machine-specific path. To force the harness-installed CLI instead, set
+  // terraform.languageServer.path to an absolute path in your *User* settings.
   "terraform.languageServer.enable": true,
 
   // ---- YAML (GitHub Actions workflows + general) -----------------------------
@@ -35,7 +36,8 @@
   },
 
   // ---- TOML (Cargo manifests) ------------------------------------------------
-  "evenBetterToml.taplo.bin": "/home/rstambakhe/.npm-global/bin/taplo",
+  // Even Better TOML ships its own taplo; no bin override keeps this portable.
+  // Override evenBetterToml.taplo.bin in your *User* settings for the harness CLI.
   "evenBetterToml.formatter.alignEntries": false,
 
   // ---- File associations -----------------------------------------------------
